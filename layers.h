@@ -52,7 +52,7 @@ enum BiomeID
     nether_wastes,              hell = nether_wastes,
     the_end,                    sky = the_end,
     // 10
-    frozen_ocean,               frozenOcean = frozen_ocean,
+    legacy_frozen_ocean,
     frozen_river,               frozenRiver = frozen_river,
     snowy_tundra,               icePlains = snowy_tundra,
     snowy_mountains,            iceMountains = snowy_mountains,
@@ -85,18 +85,17 @@ enum BiomeID
     wooded_badlands_plateau,    mesaPlateau_F = wooded_badlands_plateau,
     badlands_plateau,           mesaPlateau = badlands_plateau,
     // 40  --  1.13
-    small_end_islands,
-    end_midlands,
-    end_highlands,
-    end_barrens,
     warm_ocean,                 warmOcean = warm_ocean,
-    lukewarm_ocean,             lukewarmOcean = lukewarm_ocean,
-    cold_ocean,                 coldOcean = cold_ocean,
     deep_warm_ocean,            warmDeepOcean = deep_warm_ocean,
+    lukewarm_ocean,             lukewarmOcean = lukewarm_ocean,
     deep_lukewarm_ocean,        lukewarmDeepOcean = deep_lukewarm_ocean,
+    cold_ocean,                 coldOcean = cold_ocean,
     deep_cold_ocean,            coldDeepOcean = deep_cold_ocean,
-    // 50
+    frozen_ocean,               frozenOcean = frozen_ocean,
     deep_frozen_ocean,          frozenDeepOcean = deep_frozen_ocean,
+    bamboo_jungle,
+    bamboo_jungle_hills,
+    // 50
     BIOME_NUM,
 
     the_void = 127,
@@ -123,17 +122,19 @@ enum BiomeID
     eroded_badlands                 = badlands+128,
     modified_wooded_badlands_plateau = wooded_badlands_plateau+128,
     modified_badlands_plateau       = badlands_plateau+128,
-    // 1.14
-    bamboo_jungle                   = 168,
-    bamboo_jungle_hills             = 169,
     // 1.16
-    soul_sand_valley                = 170,
-    crimson_forest                  = 171,
-    warped_forest                   = 172,
-    basalt_deltas                   = 173,
+    soul_sand_valley                = 178,
+    crimson_forest                  = 179,
+    warped_forest                   = 180,
+    basalt_deltas                   = 181,
     // 1.17
     dripstone_caves                 = 174,
     lush_caves                      = 175,
+
+    small_end_islands = the_end,
+    end_midlands = the_end,
+    end_highlands = the_end,
+    end_barrens = the_end,
 };
 
 
@@ -406,6 +407,7 @@ mapfunc_t mapSwampRiver;
 mapfunc_t mapRiverMix;
 mapfunc_t mapOceanTemp;
 mapfunc_t mapOceanMix;
+mapfunc_t mapOceanEdge; // BE function
 
 // final layer 1:1
 mapfunc_t mapVoronoi;       // mapVoronoiZoom
