@@ -91,10 +91,10 @@ const char *biome2str(int id)
     case wooded_badlands_plateau: return "wooded_badlands_plateau";
     case badlands_plateau: return "badlands_plateau";
     // 40  --  1.13
-    case small_end_islands: return "small_end_islands";
-    case end_midlands: return "end_midlands";
-    case end_highlands: return "end_highlands";
-    case end_barrens: return "end_barrens";
+    // case small_end_islands: return "small_end_islands";
+    // case end_midlands: return "end_midlands";
+    // case end_highlands: return "end_highlands";
+    // case end_barrens: return "end_barrens";
     case warm_ocean: return "warm_ocean";
     case lukewarm_ocean: return "lukewarm_ocean";
     case cold_ocean: return "cold_ocean";
