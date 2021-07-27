@@ -168,11 +168,9 @@ int getCategory(int mc, int id)
     case eroded_badlands:
     case modified_wooded_badlands_plateau:
     case modified_badlands_plateau:
-        return mesa;
-
     case wooded_badlands_plateau:
     case badlands_plateau:
-        return mc <= MC_1_15 ? mesa : badlands_plateau;
+        return mesa;
 
     case mushroom_fields:
     case mushroom_field_shore:
@@ -232,11 +230,11 @@ int areSimilar(int mc, int id1, int id2)
 {
     if (id1 == id2) return 1;
 
-    if (mc <= MC_1_15)
-    {
-        if (id1 == wooded_badlands_plateau || id1 == badlands_plateau)
-            return id2 == wooded_badlands_plateau || id2 == badlands_plateau;
-    }
+    // if (mc <= MC_1_15)
+    // {
+        // if (id1 == wooded_badlands_plateau || id1 == badlands_plateau)
+        //     return id2 == wooded_badlands_plateau || id2 == badlands_plateau;
+    // }
 
     return getCategory(mc, id1) == getCategory(mc, id2);
 }
@@ -1795,15 +1793,12 @@ int mapDeepOcean(const Layer * l, int * out, int x, int z, int w, int h)
 
 
 const int warmBiomes[] = {desert, desert, desert, savanna, savanna, plains};
-const int lushBiomesJava[] = {forest, dark_forest, mountains, plains, birch_forest, swamp};
-const int lushBiomesBE[] = {forest, dark_forest, mountains, plains, plains, plains, birch_forest, swamp};
+const int lushBiomes[] = {forest, dark_forest, mountains, plains, plains, plains, birch_forest, swamp};
 const int coldBiomes[] = {forest, mountains, taiga, plains};
 const int snowBiomes[] = {snowy_tundra, snowy_tundra, snowy_tundra, snowy_taiga};
 
 const int oldBiomes[] = { desert, forest, mountains, swamp, plains, taiga, jungle };
 const int oldBiomes11[] = { desert, forest, mountains, swamp, plains, taiga };
-
-#define lushBiomes lushBiomesBE
 
 int mapBiome(const Layer * l, int * out, int x, int z, int w, int h)
 {
@@ -1890,10 +1885,11 @@ int mapNoise(const Layer * l, int * out, int x, int z, int w, int h)
     if U(err != 0)
         return err;
 
+    uint64_t st = l->startSalt;
     uint64_t ss = l->startSeed;
     uint64_t cs;
 
-    int mod = (l->mc <= MC_1_6) ? 2 : 299999;
+    int mod = 299999;
 
     int i, j;
     for (j = 0; j < h; j++)
@@ -2073,8 +2069,7 @@ int mapHills(const Layer * l, int * out, int x, int z, int w, int h)
             int idx = i + j*w;
             int bn = -1;
 
-            if (mc >= MC_1_7)
-                bn = (b11 - 2) % 29;
+            bn = (b11 - 2) % 29;
 
             if (bn == 1 && b11 >= 2 && !isShallowOcean(a11))
             {
@@ -2142,10 +2137,12 @@ int mapHills(const Layer * l, int * out, int x, int z, int w, int h)
                     case savanna:
                         hillID = savanna_plateau;
                         break;
+                    case wooded_badlands_plateau:
+                    case badlands_plateau:
+                        hillID = badlands;
+                        break;
                     default:
-                        if (areSimilar(mc, a11, wooded_badlands_plateau))
-                            hillID = badlands;
-                        else if (isDeepOcean(a11))
+                        if (isDeepOcean(a11))
                         {
                             cs = mcStepSeed(cs, st);
                             if (mcFirstIsZero(cs, 3))
@@ -2177,7 +2174,7 @@ int mapHills(const Layer * l, int * out, int x, int z, int w, int h)
                         if (areSimilar(mc, a01, a11)) equals++;
                         if (areSimilar(mc, a12, a11)) equals++;
 
-                        if (equals >= 3 + (mc <= MC_1_6))
+                        if (equals >= 3)
                             out[idx] = hillID;
                         else
                             out[idx] = a11;
@@ -2439,7 +2436,7 @@ int mapShore(const Layer * l, int * out, int x, int z, int w, int h)
                     out[i + j*w] = jungle_edge;
                 }
             }
-            else if (v11 == mountains || v11 == wooded_mountains /* || v11 == mountain_edge*/)
+            else if (v11 == mountains || v11 == wooded_mountains /* || v11 == mountain_edge*/) // TODO: the last one might be in bedrock
             {
                 replaceOcean(out, i + j*w, v10, v21, v01, v12, v11, stone_shore);
             }
