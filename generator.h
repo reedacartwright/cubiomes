@@ -22,12 +22,12 @@ enum
     L_HEAT_1024,            L_HEAT_ICE_1024 = L_HEAT_1024,          // 1.7+
     L_SPECIAL_1024,                                                 // 1.7+
     L_ZOOM_512,
-    L_LAND_512,                                                     // 1.6-
+    //L_LAND_512,                                                     // 1.6-
     L_ZOOM_256,
     L_LAND_256,             L_ADD_ISLAND_256 = L_LAND_256,
+    L_BIOME_256,
     L_MUSHROOM_256,         L_ADD_MUSHROOM_256 = L_MUSHROOM_256,
     L_DEEP_OCEAN_256,                                               // 1.7+
-    L_BIOME_256,
     L_BAMBOO_256,           L14_BAMBOO_256 = L_BAMBOO_256,          // 1.14+
     L_ZOOM_128,
     L_ZOOM_64,
@@ -41,7 +41,7 @@ enum
     L_LAND_32,              L_ADD_ISLAND_32 = L_LAND_32,
     L_ZOOM_16,
     L_SHORE_16,
-    L_SWAMP_RIVER_16,                                               // 1.6-
+    //L_SWAMP_RIVER_16,                                               // 1.6-
     L_ZOOM_8,
     L_ZOOM_4,
     L_SMOOTH_4,
@@ -63,14 +63,13 @@ enum
     L_ZOOM_8_OCEAN,         L13_ZOOM_8 = L_ZOOM_8_OCEAN,            // 1.13+
     L_ZOOM_4_OCEAN,         L13_ZOOM_4 = L_ZOOM_4_OCEAN,            // 1.13+
     L_OCEAN_MIX_4,          L13_OCEAN_MIX_4 = L_OCEAN_MIX_4,        // 1.13+
-
     L_VORONOI_1,            L_VORONOI_ZOOM_1 = L_VORONOI_1,
 
-    // largeBiomes layers
-    L_ZOOM_LARGE_A,
-    L_ZOOM_LARGE_B,
-    L_ZOOM_L_RIVER_A,
-    L_ZOOM_L_RIVER_B,
+    // // largeBiomes layers
+    // L_ZOOM_LARGE_A,
+    // L_ZOOM_LARGE_B,
+    // L_ZOOM_L_RIVER_A,
+    // L_ZOOM_L_RIVER_B,
 
     L_NUM
 };

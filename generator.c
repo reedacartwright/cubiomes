@@ -75,7 +75,7 @@ void setupGeneratorLargeBiomes(LayerStack *g, int mc, int largeBiomes)
     p = setupLayer(g, L_BIOME_256,      mapBiome,       mc, 1, 0, 200,  p, 0);
     p = setupLayer(g, L_MUSHROOM_256,   mapMushroom,    mc, 1, 2, 5,    p, 0);
     p = setupLayer(g, L_DEEP_OCEAN_256, mapDeepOcean,   mc, 1, 2, 4,    p, 0);
-
+    
     p = setupLayer(g, L_BAMBOO_256,     mapBamboo,      mc, 1, 0, 1001, p, 0);
     p = setupLayer(g, L_ZOOM_128,       mapZoom,        mc, 2, 3, 1001, p, 0);
     p = setupLayer(g, L_ZOOM_64,        mapZoom,        mc, 2, 3, 1001, p, 0);
@@ -130,10 +130,10 @@ void setupGeneratorLargeBiomes(LayerStack *g, int mc, int largeBiomes)
     p = setupLayer(g, L_VORONOI_1, mapVoronoi114, mc, 4, 7, 10, p, 0);
 
     g->entry_1 = p;
-    g->entry_4 = g->layers + (mc <= MC_1_12 ? L_RIVER_MIX_4 : L_OCEAN_MIX_4);
-    g->entry_16 = g->layers + (mc <= MC_1_6 ? L_SWAMP_RIVER_16 : L_SHORE_16);
-    g->entry_64 = g->layers + (mc <= MC_1_7 ? L_HILLS_64 : L_SUNFLOWER_64);
-    g->entry_256 = g->layers + (mc <= MC_1_14 ? L_BIOME_256 : L_BAMBOO_256);
+    g->entry_4 = g->layers + L_OCEAN_MIX_4;
+    g->entry_16 = g->layers + L_SHORE_16;
+    g->entry_64 = g->layers + L_SUNFLOWER_64;
+    g->entry_256 = g->layers + L_BAMBOO_256;
 
     setupScale(g->entry_1, 1);
 }
