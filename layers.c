@@ -12,14 +12,14 @@
 int biomeExists(int mc, int id)
 {
     if (id >= ocean             && id <= mountain_edge)     return 1;
-    if (id >= jungle            && id <= jungle_hills)      return mc >= MC_1_2;
-    if (id >= jungle_edge       && id <= badlands_plateau)  return mc >= MC_1_7;
-    if (id >= warm_ocean        && id <= deep_frozen_ocean) return mc >= MC_1_13;
+    if (id >= jungle            && id <= jungle_hills)      return 1;
+    if (id >= jungle_edge       && id <= badlands_plateau)  return 1;
+    if (id >= warm_ocean        && id <= deep_frozen_ocean) return 1;
 
     switch (id)
     {
     case the_void:
-        return mc >= MC_1_9;
+        return 1;
     case sunflower_plains:
     case desert_lakes:
     case gravelly_mountains:
@@ -41,18 +41,18 @@ int biomeExists(int mc, int id)
     case eroded_badlands:
     case modified_wooded_badlands_plateau:
     case modified_badlands_plateau:
-        return mc >= MC_1_7;
+        return 1;
     case bamboo_jungle:
     case bamboo_jungle_hills:
-        return mc >= MC_1_14;
+        return 1;
     case soul_sand_valley:
     case crimson_forest:
     case warped_forest:
     case basalt_deltas:
-        return mc >= MC_1_16;
+        return 1;
     case dripstone_caves:
     case lush_caves:
-        return mc >= MC_1_17;
+        return 0;
     default:
         return 0;
     }
@@ -71,14 +71,14 @@ int isOverworld(int mc, int id)
     case the_end:
         return 0;
     case frozen_ocean:
-        return mc <= MC_1_6 || mc >= MC_1_13;
+        return 1;
     case mountain_edge:
-        return mc <= MC_1_6;
+        return 0;
     case deep_warm_ocean:
     case the_void:
         return 0;
     case tall_birch_hills:
-        return mc <= MC_1_8 || mc >= MC_1_11;
+        return 1;
     case dripstone_caves:
     case lush_caves:
         return 0;
@@ -99,11 +99,8 @@ int getMutated(int mc, int id)
     case snowy_tundra:              return ice_spikes;
     case jungle:                    return modified_jungle;
     case jungle_edge:               return modified_jungle_edge;
-    // emulate MC-98995
-    case birch_forest:
-        return (mc >= MC_1_9 && mc <= MC_1_10) ? tall_birch_hills : tall_birch_forest;
-    case birch_forest_hills:
-        return (mc >= MC_1_9 && mc <= MC_1_10) ? none : tall_birch_hills;
+    case birch_forest:              return tall_birch_forest;
+    case birch_forest_hills:        return tall_birch_hills;
     case dark_forest:               return dark_forest_hills;
     case snowy_taiga:               return snowy_taiga_mountains;
     case giant_tree_taiga:          return giant_spruce_taiga;
@@ -230,12 +227,6 @@ int areSimilar(int mc, int id1, int id2)
 {
     if (id1 == id2) return 1;
 
-    // if (mc <= MC_1_15)
-    // {
-        // if (id1 == wooded_badlands_plateau || id1 == badlands_plateau)
-        //     return id2 == wooded_badlands_plateau || id2 == badlands_plateau;
-    // }
-
     return getCategory(mc, id1) == getCategory(mc, id2);
 }
 
@@ -325,22 +316,10 @@ void setLayerSeed(Layer *layer, uint64_t worldSeed)
     if (layer->p != NULL)
         setLayerSeed(layer->p, worldSeed);
 
-    if (layer->noise != NULL)
-    {
-        uint64_t s;
-        setSeed(&s, worldSeed);
-        perlinInit((PerlinNoise*)layer->noise, &s);
-    }
-
     uint64_t ls = layer->layerSalt;
     if (ls == 0)
     {   // Pre 1.13 the Hills branch stays zero-initialized
         layer->startSalt = 0;
-        layer->startSeed = 0;
-    }
-    else if (ls == LAYER_INIT_SHA)
-    {   // Post 1.14 Voronoi uses SHA256 for initialization
-        layer->startSalt = getVoronoiSHA(worldSeed);
         layer->startSeed = 0;
     }
     else
@@ -1821,54 +1800,33 @@ int mapBiome(const Layer * l, int * out, int x, int z, int w, int h)
             int hasHighBit = (id & 0xf00);
             id &= ~0xf00;
 
-            if (mc <= MC_1_6)
+            if (isOceanic(id) || id == mushroom_fields)
             {
-                if (id == ocean || id == mushroom_fields)
-                {
-                    out[idx] = id;
-                    continue;
-                }
-
-                cs = getChunkSeed(ss, i + x, j + z);
-
-                if (mc <= MC_1_1)
-                    v = oldBiomes11[mcFirstInt(cs, sizeof(oldBiomes11)/sizeof(int))];
-                else
-                    v = oldBiomes[mcFirstInt(cs, sizeof(oldBiomes)/sizeof(int))];
-
-                if (id != plains && (v != taiga || mc <= MC_1_2))
-                    v = snowy_tundra;
+                out[idx] = id;
+                continue;
             }
-            else
+
+            cs = getChunkSeed(ss, i + x, j + z);
+
+            switch (id)
             {
-                if (isOceanic(id) || id == mushroom_fields)
-                {
-                    out[idx] = id;
-                    continue;
-                }
-
-                cs = getChunkSeed(ss, i + x, j + z);
-
-                switch (id)
-                {
-                case Warm:
-                    if (hasHighBit) v = mcFirstIsZero(cs, 3) ? badlands_plateau : wooded_badlands_plateau;
-                    else v = warmBiomes[mcFirstInt(cs, sizeof(warmBiomes)/sizeof(int))];
-                    break;
-                case Lush:
-                    if (hasHighBit) v = jungle;
-                    else v = lushBiomes[mcFirstInt(cs, sizeof(lushBiomes)/sizeof(int))];
-                    break;
-                case Cold:
-                    if (hasHighBit) v = giant_tree_taiga;
-                    else v = coldBiomes[mcFirstInt(cs, sizeof(coldBiomes)/sizeof(int))];
-                    break;
-                case Freezing:
-                    v = snowBiomes[mcFirstInt(cs, sizeof(snowBiomes)/sizeof(int))];
-                    break;
-                default:
-                    v = mushroom_fields;
-                }
+            case Warm:
+                if (hasHighBit) v = mcFirstIsZero(cs, 3) ? badlands_plateau : wooded_badlands_plateau;
+                else v = warmBiomes[mcFirstInt(cs, sizeof(warmBiomes)/sizeof(int))];
+                break;
+            case Lush:
+                if (hasHighBit) v = jungle;
+                else v = lushBiomes[mcFirstInt(cs, sizeof(lushBiomes)/sizeof(int))];
+                break;
+            case Cold:
+                if (hasHighBit) v = giant_tree_taiga;
+                else v = coldBiomes[mcFirstInt(cs, sizeof(coldBiomes)/sizeof(int))];
+                break;
+            case Freezing:
+                v = snowBiomes[mcFirstInt(cs, sizeof(snowBiomes)/sizeof(int))];
+                break;
+            default:
+                v = mushroom_fields;
             }
 
             out[idx] = v;
@@ -2110,10 +2068,6 @@ int mapHills(const Layer * l, int * out, int x, int z, int w, int h)
                         hillID = snowy_taiga_hills;
                         break;
                     case plains:
-                        if (mc <= MC_1_6) {
-                            hillID = forest;
-                            break;
-                        }
                         cs = mcStepSeed(cs, st);
                         hillID = mcFirstIsZero(cs, 3) ? wooded_hills : forest;
                         break;
@@ -2127,12 +2081,10 @@ int mapHills(const Layer * l, int * out, int x, int z, int w, int h)
                         hillID = bamboo_jungle_hills;
                         break;
                     case ocean:
-                        if (mc >= MC_1_7)
-                            hillID = deep_ocean;
+                        hillID = deep_ocean;
                         break;
                     case mountains:
-                        if (mc >= MC_1_7)
-                            hillID = wooded_mountains;
+                        hillID = wooded_mountains;
                         break;
                     case savanna:
                         hillID = savanna_plateau;
@@ -2230,19 +2182,11 @@ int mapRiver(const Layer * l, int * out, int x, int z, int w, int h)
             int v10 = vz0[i+1];
             int v12 = vz2[i+1];
 
-            if (mc >= MC_1_7)
-            {
-                v01 = reduceID(v01);
-                v11 = reduceID(v11);
-                v21 = reduceID(v21);
-                v10 = reduceID(v10);
-                v12 = reduceID(v12);
-            }
-            else if (v11 == 0)
-            {
-                out[i + j * w] = river;
-                continue;
-            }
+            v01 = reduceID(v01);
+            v11 = reduceID(v11);
+            v21 = reduceID(v21);
+            v10 = reduceID(v10);
+            v12 = reduceID(v12);
 
             if (v11 == v01 && v11 == v10 && v11 == v12 && v11 == v21)
             {
@@ -2408,21 +2352,7 @@ int mapShore(const Layer * l, int * out, int x, int z, int w, int h)
                 continue;
             }
 
-            if (mc <= MC_1_6)
-            {
-                if (v11 == mountains)
-                {
-                    if (v10 != mountains || v21 != mountains || v01 != mountains || v12 != mountains)
-                        v11 = mountain_edge;
-                }
-                else if (v11 != ocean && v11 != river && v11 != swamp)
-                {
-                    if (isAny4(ocean, v10, v21, v01, v12))
-                        v11 = beach;
-                }
-                out[i + j*w] = v11;
-            }
-            else if (getCategory(mc, v11) == jungle)
+            if (getCategory(mc, v11) == jungle)
             {
                 if (isAll4JFTO(mc, v10, v21, v01, v12))
                 {
@@ -2543,7 +2473,7 @@ int mapRiverMix(const Layer * l, int * out, int x, int z, int w, int h)
     {
         int v = buf[idx];
 
-        if (out[idx] == river && v != ocean && (mc < MC_1_7 || !isOceanic(v)))
+        if (out[idx] == river && v != ocean && !isOceanic(v))
         {
             if (v == snowy_tundra)
                 v = frozen_river;
@@ -2715,24 +2645,6 @@ int mapOceanMix(const Layer * l, int * out, int x, int z, int w, int h)
             }
 
             oceanID = otyp[i + j*w];
-            // if      (oceanID == warm_ocean  ) replaceID = lukewarm_ocean;
-            // else if (oceanID == frozen_ocean) replaceID = cold_ocean;
-            // else replaceID = -1;
-
-            // if (replaceID > 0)
-            // {
-            //     for (ii = -8; ii <= 8; ii += 4)
-            //     {
-            //         for (jj = -8; jj <= 8; jj += 4)
-            //         {
-            //             if (!isOceanic(land[(i+ii-lx0) + (j+jj-lz0)*lw]))
-            //             {
-            //                 out[i + j*w] = replaceID;
-            //                 goto loop_x;
-            //             }
-            //         }
-            //     }
-            // }
 
             if (landID == deep_ocean)
             {
@@ -2782,172 +2694,6 @@ static inline void getVoronoiCell(uint64_t sha, int a, int b, int c,
 }
 
 int mapVoronoi(const Layer * l, int * out, int x, int z, int w, int h)
-{
-    x -= 2;
-    z -= 2;
-    int pX = x >> 2;
-    int pZ = z >> 2;
-    int pW = ((x + w) >> 2) - pX + 2;
-    int pH = ((z + h) >> 2) - pZ + 2;
-
-    if (l->p)
-    {
-        int err = l->p->getMap(l->p, out, pX, pZ, pW, pH);
-        if (err != 0)
-            return err;
-    }
-
-    uint64_t sha = l->startSalt;
-    int *buf = (int *) malloc(w*h*sizeof(*buf));
-
-    int x000, x001, x010, x011, x100, x101, x110, x111;
-    int y000, y001, y010, y011, y100, y101, y110, y111;
-    int z000, z001, z010, z011, z100, z101, z110, z111;
-    int pi, pj, ii, jj, dx, dz, pjz, pix, i4, j4;
-    int v00, v01, v10, v11, v;
-    int prev_skip;
-    int64_t r;
-    uint64_t d, dmin;
-    int i, j;
-
-    for (pj = 0; pj < pH-1; pj++)
-    {
-        v00 = out[(pj+0)*pW];
-        v10 = out[(pj+1)*pW];
-        pjz = pZ + pj;
-        j4 = ((pjz) << 2) - z;
-        prev_skip = 1;
-
-        for (pi = 0; pi < pW-1; pi++)
-        {
-            PREFETCH( buf + ((pjz << 2) + 0) * w + pi, 1, 1 );
-            PREFETCH( buf + ((pjz << 2) + 1) * w + pi, 1, 1 );
-            PREFETCH( buf + ((pjz << 2) + 2) * w + pi, 1, 1 );
-            PREFETCH( buf + ((pjz << 2) + 3) * w + pi, 1, 1 );
-
-            v01 = out[(pj+0)*pW + (pi+1)];
-            v11 = out[(pj+1)*pW + (pi+1)];
-            pix = pX + pi;
-            i4 = ((pix) << 2) - x;
-
-            if (v00 == v01 && v00 == v10 && v00 == v11)
-            {
-                for (jj = 0; jj < 4; jj++)
-                {
-                    j = j4 + jj;
-                    if (j < 0 || j >= h) continue;
-                    for (ii = 0; ii < 4; ii++)
-                    {
-                        i = i4 + ii;
-                        if (i < 0 || i >= w) continue;
-                        buf[j*w + i] = v00;
-                    }
-                }
-                prev_skip = 1;
-                continue;
-            }
-            if (prev_skip)
-            {
-                getVoronoiCell(sha, pix, -1, pjz+0, &x000, &y000, &z000);
-                getVoronoiCell(sha, pix,  0, pjz+0, &x001, &y001, &z001);
-                getVoronoiCell(sha, pix, -1, pjz+1, &x100, &y100, &z100);
-                getVoronoiCell(sha, pix,  0, pjz+1, &x101, &y101, &z101);
-                prev_skip = 0;
-            }
-            getVoronoiCell(sha, pix+1, -1, pjz+0, &x010, &y010, &z010);
-            getVoronoiCell(sha, pix+1,  0, pjz+0, &x011, &y011, &z011);
-            getVoronoiCell(sha, pix+1, -1, pjz+1, &x110, &y110, &z110);
-            getVoronoiCell(sha, pix+1,  0, pjz+1, &x111, &y111, &z111);
-
-
-            for (jj = 0; jj < 4; jj++)
-            {
-                j = j4 + jj;
-                if (j < 0 || j >= h) continue;
-                for (ii = 0; ii < 4; ii++)
-                {
-                    i = i4 + ii;
-                    if (i < 0 || i >= w) continue;
-
-                    const int A = 40*1024;
-                    const int B = 20*1024;
-                    dx = ii * 10*1024;
-                    dz = jj * 10*1024;
-                    dmin = (uint64_t)-1;
-
-                    v = v00;
-                    d = 0;
-                    r = x000 - 0 + dx;  d += r*r;
-                    r = y000 + B;       d += r*r;
-                    r = z000 - 0 + dz;  d += r*r;
-                    if (d < dmin) { dmin = d; }
-                    d = 0;
-                    r = x001 - 0 + dx;  d += r*r;
-                    r = y001 - B;       d += r*r;
-                    r = z001 - 0 + dz;  d += r*r;
-                    if (d < dmin) { dmin = d; }
-
-                    d = 0;
-                    r = x010 - A + dx;  d += r*r;
-                    r = y010 + B;       d += r*r;
-                    r = z010 - 0 + dz;  d += r*r;
-                    if (d < dmin) { dmin = d; v = v01; }
-                    d = 0;
-                    r = x011 - A + dx;  d += r*r;
-                    r = y011 - B;       d += r*r;
-                    r = z011 - 0 + dz;  d += r*r;
-                    if (d < dmin) { dmin = d; v = v01; }
-
-                    d = 0;
-                    r = x100 - 0 + dx;  d += r*r;
-                    r = y100 + B;       d += r*r;
-                    r = z100 - A + dz;  d += r*r;
-                    if (d < dmin) { dmin = d; v = v10; }
-                    d = 0;
-                    r = x101 - 0 + dx;  d += r*r;
-                    r = y101 - B;       d += r*r;
-                    r = z101 - A + dz;  d += r*r;
-                    if (d < dmin) { dmin = d; v = v10; }
-
-                    d = 0;
-                    r = x110 - A + dx;  d += r*r;
-                    r = y110 + B;       d += r*r;
-                    r = z110 - A + dz;  d += r*r;
-                    if (d < dmin) { dmin = d; v = v11; }
-                    d = 0;
-                    r = x111 - A + dx;  d += r*r;
-                    r = y111 - B;       d += r*r;
-                    r = z111 - A + dz;  d += r*r;
-                    if (d < dmin) { dmin = d; v = v11; }
-
-                    buf[j*w + i] = v;
-                }
-            }
-
-            x000 = x010;
-            y000 = y010;
-            z000 = z010;
-            x100 = x110;
-            y100 = y110;
-            z100 = z110;
-            x001 = x011;
-            y001 = y011;
-            z001 = z011;
-            x101 = x111;
-            y101 = y111;
-            z101 = z111;
-            v00 = v01;
-            v10 = v11;
-        }
-    }
-
-    memcpy(out, buf, w*h*sizeof(*buf));
-    free(buf);
-    return 0;
-}
-
-
-int mapVoronoi114(const Layer * l, int * out, int x, int z, int w, int h)
 {
     x -= 2;
     z -= 2;
@@ -3065,84 +2811,6 @@ int mapVoronoi114(const Layer * l, int * out, int x, int z, int w, int h)
 
 inline static __attribute__((always_inline,const))
 uint32_t rotr(uint32_t a, int b) { return (a >> b) | (a << (32-b)); }
-
-uint64_t getVoronoiSHA(uint64_t seed)
-{
-    static const uint32_t K[64] = {
-        0x428a2f98,0x71374491, 0xb5c0fbcf,0xe9b5dba5,
-        0x3956c25b,0x59f111f1, 0x923f82a4,0xab1c5ed5,
-        0xd807aa98,0x12835b01, 0x243185be,0x550c7dc3,
-        0x72be5d74,0x80deb1fe, 0x9bdc06a7,0xc19bf174,
-        0xe49b69c1,0xefbe4786, 0x0fc19dc6,0x240ca1cc,
-        0x2de92c6f,0x4a7484aa, 0x5cb0a9dc,0x76f988da,
-        0x983e5152,0xa831c66d, 0xb00327c8,0xbf597fc7,
-        0xc6e00bf3,0xd5a79147, 0x06ca6351,0x14292967,
-        0x27b70a85,0x2e1b2138, 0x4d2c6dfc,0x53380d13,
-        0x650a7354,0x766a0abb, 0x81c2c92e,0x92722c85,
-        0xa2bfe8a1,0xa81a664b, 0xc24b8b70,0xc76c51a3,
-        0xd192e819,0xd6990624, 0xf40e3585,0x106aa070,
-        0x19a4c116,0x1e376c08, 0x2748774c,0x34b0bcb5,
-        0x391c0cb3,0x4ed8aa4a, 0x5b9cca4f,0x682e6ff3,
-        0x748f82ee,0x78a5636f, 0x84c87814,0x8cc70208,
-        0x90befffa,0xa4506ceb, 0xbef9a3f7,0xc67178f2,
-    };
-    static const uint32_t B[8] = {
-        0x6a09e667,0xbb67ae85, 0x3c6ef372,0xa54ff53a,
-        0x510e527f,0x9b05688c, 0x1f83d9ab,0x5be0cd19,
-    };
-
-    uint32_t m[64];
-    uint32_t a0,a1,a2,a3,a4,a5,a6,a7;
-    uint32_t i, x, y;
-    m[0] = __builtin_bswap32((uint32_t)(seed));
-    m[1] = __builtin_bswap32((uint32_t)(seed >> 32));
-    m[2] = 0x80000000;
-    for (i = 3; i < 15; i++)
-        m[i] = 0;
-    m[15] = 0x00000040;
-
-    for (i = 16; i < 64; ++i)
-    {
-        m[i] = m[i - 7] + m[i - 16];
-        x = m[i - 15];
-        m[i] += rotr(x,7) ^ rotr(x,18) ^ (x >> 3);
-        x = m[i - 2];
-        m[i] += rotr(x,17) ^ rotr(x,19) ^ (x >> 10);
-    }
-
-    a0 = B[0];
-    a1 = B[1];
-    a2 = B[2];
-    a3 = B[3];
-    a4 = B[4];
-    a5 = B[5];
-    a6 = B[6];
-    a7 = B[7];
-
-    for (i = 0; i < 64; i++)
-    {
-        x = a7 + K[i] + m[i];
-        x += rotr(a4,6) ^ rotr(a4,11) ^ rotr(a4,25);
-        x += (a4 & a5) ^ (~a4 & a6);
-
-        y = rotr(a0,2) ^ rotr(a0,13) ^ rotr(a0,22);
-        y += (a0 & a1) ^ (a0 & a2) ^ (a1 & a2);
-
-        a7 = a6;
-        a6 = a5;
-        a5 = a4;
-        a4 = a3 + x;
-        a3 = a2;
-        a2 = a1;
-        a1 = a0;
-        a0 = x + y;
-    }
-
-    a0 += B[0];
-    a1 += B[1];
-
-    return __builtin_bswap32(a0) | ((uint64_t)__builtin_bswap32(a1) << 32);
-}
 
 void voronoiAccess3D(uint64_t sha, int x, int y, int z, int *x4, int *y4, int *z4)
 {

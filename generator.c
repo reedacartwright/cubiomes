@@ -15,13 +15,12 @@ Layer *setupLayer(LayerStack *g, int layerId, mapfunc_t *map, int mc,
     l->zoom = zoom;
     l->edge = edge;
     l->scale = 0;
-    if (saltbase == 0 || saltbase == LAYER_INIT_SHA)
+    if (saltbase == 0)
         l->layerSalt = saltbase;
     else
         l->layerSalt = getLayerSalt(saltbase);
     l->startSalt = 0;
     l->startSeed = 0;
-    l->noise = NULL;
     l->data = NULL;
     l->p = p;
     l->p2 = p2;
@@ -37,7 +36,7 @@ static void setupScale(Layer *l, int scale)
         setupScale(l->p2, scale * l->zoom);
 }
 
-void setupGeneratorLargeBiomes(LayerStack *g, int mc, int largeBiomes)
+void setupOverworldGenerator(LayerStack *g, int mc)
 {
     memset(g, 0, sizeof(LayerStack));
     Layer *p;
@@ -127,7 +126,7 @@ void setupGeneratorLargeBiomes(LayerStack *g, int mc, int largeBiomes)
     p = setupLayer(g, L_OCEAN_MIX_4,    mapOceanMix,    mc, 1, 17, 100,
             g->layers+L_RIVER_MIX_4, g->layers+L_ZOOM_4_OCEAN);
 
-    p = setupLayer(g, L_VORONOI_1, mapVoronoi114, mc, 4, 7, 10, p, 0);
+    p = setupLayer(g, L_VORONOI_1, mapVoronoi, mc, 4, 7, 10, p, 0);
 
     g->entry_1 = p;
     g->entry_4 = g->layers + L_OCEAN_MIX_4;
@@ -136,11 +135,6 @@ void setupGeneratorLargeBiomes(LayerStack *g, int mc, int largeBiomes)
     g->entry_256 = g->layers + L_BAMBOO_256;
 
     setupScale(g->entry_1, 1);
-}
-
-void setupGenerator(LayerStack *g, int mc)
-{
-    setupGeneratorLargeBiomes(g, mc, 0);
 }
 
 /* Recursively calculates the minimum buffer size required to generate an area
@@ -211,14 +205,6 @@ int genNetherScaled(int mc, uint64_t seed, int scale, int *out,
     if (scale != 1 && scale != 4 && scale != 16 && scale != 64)
         return 1; // unsupported scale
 
-    if (mc < MC_1_16)
-    {
-        int i, siz = w*h*(y1-y0+1);
-        for (i = 0; i < siz; i++)
-            out[i] = nether_wastes;
-        return 0;
-    }
-
     NetherNoise nn;
     setNetherSeed(&nn, seed);
 
@@ -242,7 +228,8 @@ int genNetherScaled(int mc, uint64_t seed, int scale, int *out,
             return err;
         Layer lvoronoi;
         memset(&lvoronoi, 0, sizeof(Layer));
-        lvoronoi.startSalt = getVoronoiSHA(seed);
+        lvoronoi.layerSalt = 10;
+        setLayerSeed(&lvoronoi, seed);
         return mapVoronoi(&lvoronoi, out, x, z, w, h);
     }
     else
@@ -255,119 +242,13 @@ int genNetherScaled(int mc, uint64_t seed, int scale, int *out,
 int genEndScaled(int mc, uint64_t seed, int scale, int *out,
         int x, int z, int w, int h)
 {
-    if (scale != 1 && scale != 4 && scale != 16 && scale != 64)
+    if (scale != 1)
         return 1; // unsupported scale
 
-    if (mc < MC_1_9)
-    {
-        int i, siz = w*h;
-        for (i = 0; i < siz; i++)
-            out[i] = the_end;
-        return 0;
-    }
-
-    EndNoise en;
-    setEndSeed(&en, seed);
-
-    if (scale == 1)
-    {
-        int vx = x - 2;
-        int vz = z - 2;
-        int pX = vx >> 2;
-        int pZ = vz >> 2;
-        int pW = ((vx + w) >> 2) - pX + 2;
-        int pH = ((vz + h) >> 2) - pZ + 2;
-
-        int err = mapEnd(&en, out, pX, pZ, pW, pH);
-        if (err)
-            return err;
-        Layer lvoronoi;
-        memset(&lvoronoi, 0, sizeof(Layer));
-        if (mc >= MC_1_15)
-        {
-            lvoronoi.startSalt = getVoronoiSHA(seed);
-            return mapVoronoi(&lvoronoi, out, x, z, w, h);
-        }
-        else
-        {
-            lvoronoi.startSalt = getLayerSalt(10);
-            return mapVoronoi114(&lvoronoi, out, x, z, w, h);
-        }
-    }
-    else if (scale == 4)
-    {
-        return mapEnd(&en, out, x, z, w, h);
-    }
-    else if (scale == 16)
-    {
-        return mapEndBiome(&en, out, x, z, w, h);
-    }
-    else if (scale == 64)
-    {
-        int i, j, di, dj;
-        int r = 4;
-        int hw = (2+w) * r + 1;
-        int hh = (2+h) * r + 1;
-        int16_t *hmap = (int16_t*) calloc(hw*hh, sizeof(*hmap));
-
-        for (j = 0; j < h; j++)
-        {
-            for (i = 0; i < w; i++)
-            {
-                int64_t hx = (i+x) * r;
-                int64_t hz = (j+z) * r;
-                if (hx*hx + hz*hz <= 4096L)
-                {
-                    out[j*w+i] = the_end;
-                    continue;
-                }
-
-                int64_t h = 64*16*16;
-
-                for (dj = -r; dj < r; dj++)
-                {
-                    for (di = -r; di < r; di++)
-                    {
-                        int64_t rx = hx + di;
-                        int64_t rz = hz + dj;
-                        int hi = i*r + di+r;
-                        int hj = j*r + dj+r;
-                        int16_t *p = &hmap[hj*hw + hi];
-                        if (*p == 0)
-                        {
-                            if (sampleSimplex2D(&en, rx, rz) < -0.9f)
-                            {
-                                *p = (llabs(rx) * 3439 + llabs(rz) * 147) % 13 + 9;
-                                *p *= *p;
-                            }
-                            else
-                            {
-                                *p = -1;
-                            }
-                        }
-
-                        if (*p > 0)
-                        {
-                            int64_t noise = 4*(di*di + dj*dj) * (*p);
-                            if (noise < h)
-                                h = noise;
-                        }
-                    }
-                }
-
-                if (h < 3600)
-                    out[j*w+i] = end_highlands;
-                else if (h <= 10000)
-                    out[j*w+i] = end_midlands;
-                else if (h <= 14400)
-                    out[j*w+i] = end_barrens;
-                else
-                    out[j*w+i] = small_end_islands;
-            }
-        }
-        free(hmap);
-    }
-    return 1;
+    int i, siz = w*h;
+    for (i = 0; i < siz; i++)
+        out[i] = the_end;
+    return 0;
 }
 
 

@@ -84,7 +84,6 @@ STRUCT(LayerStack)
     Layer *entry_16;    // [L_SWAMP_RIVER_16|L_SHORE_16]
     Layer *entry_64;    // [L_HILLS_64|L_SUNFLOWER_64]
     Layer *entry_256;   // [L_BIOME_256|L_BAMBOO_256]
-    PerlinNoise oceanRnd;
 };
 
 
@@ -94,11 +93,7 @@ extern "C"
 #endif
 
 /* Initialise an instance of a generator. */
-void setupGenerator(LayerStack *g, int mc);
-
-/* Initialise an instance of a generator with largeBiomes configuration. */
-void setupGeneratorLargeBiomes(LayerStack *g, int mc, int largeBiomes);
-
+void setupOverworldGenerator(LayerStack *g, int mc);
 
 /* Calculates the minimum size of the buffers required to generate an area of
  * dimensions 'sizeX' by 'sizeZ' at the specified layer.
