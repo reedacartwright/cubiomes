@@ -197,8 +197,6 @@ int genArea(const Layer *layer, int *out, int areaX, int areaZ, int areaWidth, i
     return layer->getMap(layer, out, areaX, areaZ, areaWidth, areaHeight);
 }
 
-
-
 int genNetherScaled(int mc, uint64_t seed, int scale, int *out,
         int x, int z, int w, int h, int y0, int y1)
 {
@@ -228,7 +226,7 @@ int genNetherScaled(int mc, uint64_t seed, int scale, int *out,
             return err;
         Layer lvoronoi;
         memset(&lvoronoi, 0, sizeof(Layer));
-        lvoronoi.layerSalt = 10;
+        lvoronoi.layerSalt = getLayerSalt(10);
         setLayerSeed(&lvoronoi, seed);
         return mapVoronoi(&lvoronoi, out, x, z, w, h);
     }

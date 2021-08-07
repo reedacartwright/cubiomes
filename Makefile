@@ -27,9 +27,11 @@ ifeq ($(OS),Windows_NT)
 else
 libcubiomes: CFLAGS += -fPIC
 endif
-libcubiomes: layers.o generator.o finders.o util.o
-	$(AR) $(ARFLAGS) libcubiomes.a $^
 
+libcubiomes: libcubiomes.a
+
+libcubiomes.a: layers.o generator.o finders.o util.o mcrandom.o
+	$(AR) $(ARFLAGS) $@ $^
 
 finders.o: finders.c finders.h
 	$(CC) -c $(CFLAGS) $<
@@ -41,6 +43,9 @@ layers.o: layers.c layers.h
 	$(CC) -c $(CFLAGS) $<
 
 util.o: util.c util.h
+	$(CC) -c $(CFLAGS) $<
+
+mcrandom.o: mcrandom.c mcrandom.h
 	$(CC) -c $(CFLAGS) $<
 
 clean:

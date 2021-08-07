@@ -1,8 +1,6 @@
 #ifndef LAYER_H_
 #define LAYER_H_
 
-#include "javarnd.h"
-
 #define __STDC_FORMAT_MACROS 1
 
 #include <stdlib.h>
@@ -226,21 +224,21 @@ void setLayerSeed(Layer *layer, uint64_t worldSeed);
 // Noise
 //==============================================================================
 
-void perlinInit(PerlinNoise *rnd, uint64_t *seed);
+void perlinInit(PerlinNoise *rnd);
 double samplePerlin(const PerlinNoise *rnd, double x, double y, double z,
         double yamp, double ymin);
 double sampleSimplex2D(const PerlinNoise *rnd, double x, double y);
 
-void octaveInit(OctaveNoise *rnd, uint64_t *seed, PerlinNoise *octaves,
+void octaveInit(OctaveNoise *rnd, PerlinNoise *octaves,
         int omin, int len);
 double sampleOctave(const OctaveNoise *rnd, double x, double y, double z);
 
-void doublePerlinInit(DoublePerlinNoise *rnd, uint64_t *seed,
+void doublePerlinInit(DoublePerlinNoise *rnd,
         PerlinNoise *octavesA, PerlinNoise *octavesB, int omin, int len);
 double sampleDoublePerlin(const DoublePerlinNoise *rnd,
         double x, double y, double z);
 
-void initSurfaceNoise(SurfaceNoise *rnd, uint64_t *seed,
+void initSurfaceNoise(SurfaceNoise *rnd,
         double xzScale, double yScale, double xzFactor, double yFactor);
 void initSurfaceNoiseEnd(SurfaceNoise *rnd, uint64_t seed);
 double sampleSurfaceNoise(const SurfaceNoise *rnd, int x, int y, int z);

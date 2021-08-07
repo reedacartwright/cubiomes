@@ -1,4 +1,5 @@
 #include "layers.h"
+#include "mcrandom.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -383,13 +384,13 @@ static double indexedLerp(int idx, double d1, double d2, double d3)
 }
 
 
-void perlinInit(PerlinNoise *rnd, uint64_t *seed)
+void perlinInit(PerlinNoise *rnd)
 {
     int i = 0;
     memset(rnd, 0, sizeof(*rnd));
-    rnd->a = nextDouble(seed) * 256.0;
-    rnd->b = nextDouble(seed) * 256.0;
-    rnd->c = nextDouble(seed) * 256.0;
+    rnd->a = nextFloat() * 256.0;
+    rnd->b = nextFloat() * 256.0;
+    rnd->c = nextFloat() * 256.0;
 
     for (i = 0; i < 256; i++)
     {
@@ -397,7 +398,7 @@ void perlinInit(PerlinNoise *rnd, uint64_t *seed)
     }
     for (i = 0; i < 256; i++)
     {
-        int n3 = nextInt(seed, 256 - i) + i;
+        int n3 = nextInt(256 - i) + i;
         int n4 = rnd->d[i];
         rnd->d[i] = rnd->d[n3];
         rnd->d[n3] = n4;
@@ -499,7 +500,7 @@ double sampleSimplex2D(const PerlinNoise *rnd, double x, double y)
 }
 
 
-void octaveInit(OctaveNoise *rnd, uint64_t *seed, PerlinNoise *octaves,
+void octaveInit(OctaveNoise *rnd, PerlinNoise *octaves,
         int omin, int len)
 {
     int end = omin+len-1;
@@ -514,17 +515,17 @@ void octaveInit(OctaveNoise *rnd, uint64_t *seed, PerlinNoise *octaves,
 
     if (end == 0)
     {
-        perlinInit(&rnd->octaves[0], seed);
+        perlinInit(&rnd->octaves[0]);
         i = 1;
     }
     else
     {
-        skipNextN(seed, -end*262);
+        //skipNextN(-end*262);
         i = 0;
     }
     for (; i < len; i++)
     {
-        perlinInit(&rnd->octaves[i], seed);
+        perlinInit(&rnd->octaves[i]);
     }
     rnd->persist = pow(2.0, end);
     rnd->lacuna = 1.0 / ((1LL << len) - 1.0);
@@ -549,12 +550,12 @@ double sampleOctave(const OctaveNoise *rnd, double x, double y, double z)
 }
 
 
-void doublePerlinInit(DoublePerlinNoise *rnd, uint64_t *seed,
+void doublePerlinInit(DoublePerlinNoise *rnd,
         PerlinNoise *octavesA, PerlinNoise *octavesB, int omin, int len)
 {   // require: len >= 1 && omin+len <= 0
-    rnd->amplitude = (10.0 / 6.0) * len / (len + 1);
-    octaveInit(&rnd->octA, seed, octavesA, omin, len);
-    octaveInit(&rnd->octB, seed, octavesB, omin, len);
+    rnd->amplitude = (10.0 / 6.0) * (len+1) / (len + 1 + 1);
+    octaveInit(&rnd->octA, octavesA, omin, len);
+    octaveInit(&rnd->octB, octavesB, omin, len);
 }
 
 double sampleDoublePerlin(const DoublePerlinNoise *rnd,
@@ -570,23 +571,22 @@ double sampleDoublePerlin(const DoublePerlinNoise *rnd,
 }
 
 
-void initSurfaceNoise(SurfaceNoise *rnd, uint64_t *seed,
+void initSurfaceNoise(SurfaceNoise *rnd,
         double xzScale, double yScale, double xzFactor, double yFactor)
 {
     rnd->xzScale = xzScale;
     rnd->yScale = yScale;
     rnd->xzFactor = xzFactor;
     rnd->yFactor = yFactor;
-    octaveInit(&rnd->octmin, seed, rnd->oct+0, -15, 16);
-    octaveInit(&rnd->octmax, seed, rnd->oct+16, -15, 16);
-    octaveInit(&rnd->octmain, seed, rnd->oct+32, -7, 8);
+    octaveInit(&rnd->octmin, rnd->oct+0, -15, 16);
+    octaveInit(&rnd->octmax, rnd->oct+16, -15, 16);
+    octaveInit(&rnd->octmain, rnd->oct+32, -7, 8);
 }
 
 void initSurfaceNoiseEnd(SurfaceNoise *rnd, uint64_t seed)
 {
-    uint64_t s;
-    setSeed(&s, seed);
-    initSurfaceNoise(rnd, &s, 2.0, 1.0, 80.0, 160.0);
+    setSeed(seed);
+    initSurfaceNoise(rnd, 2.0, 1.0, 80.0, 160.0);
 }
 
 double sampleSurfaceNoise(const SurfaceNoise *rnd, int x, int y, int z)
@@ -636,11 +636,10 @@ double sampleSurfaceNoise(const SurfaceNoise *rnd, int x, int y, int z)
 
 void setNetherSeed(NetherNoise *nn, uint64_t seed)
 {
-    uint64_t s;
-    setSeed(&s, seed);
-    doublePerlinInit(&nn->temperature, &s, &nn->oct[0], &nn->oct[2], -7, 2);
-    setSeed(&s, seed+1);
-    doublePerlinInit(&nn->humidity, &s, &nn->oct[4], &nn->oct[6], -7, 2);
+    setSeed(seed+0);
+    doublePerlinInit(&nn->temperature, &nn->oct[0], &nn->oct[2], -7, 2);
+    setSeed(seed+1);
+    doublePerlinInit(&nn->humidity, &nn->oct[4], &nn->oct[6], -7, 2);
 }
 
 /* Gets the 3D nether biome at scale 1:4 (for 1.16+).
@@ -749,15 +748,15 @@ int mapNether3D(const NetherNoise *nn, int *out, int x, int z, int w, int h,
             {
                 if (yout[j*w+i])
                     continue;
-                //yout[j*w+i] = getNetherBiome(nn, x+i, y+k, z+j, NULL);
-                //continue;
+                yout[j*w+i] = getNetherBiome(nn, x+i, y+k, z+j, NULL);
+                continue;
 
-                float noisedelta;
-                int xi = (x+i)*scale, yk = (y+k)*scale, zj = (z+j)*scale;
-                int v = getNetherBiome(nn, xi, yk, zj, &noisedelta);
-                yout[j*w+i] = v;
-                float cellrad = noisedelta * invgrad;
-                fillRad3D(out, i, j, w, h, k, yh, v, cellrad);
+                // float noisedelta;
+                // int xi = (x+i)*scale, yk = (y+k)*scale, zj = (z+j)*scale;
+                // int v = getNetherBiome(nn, xi, yk, zj, &noisedelta);
+                // yout[j*w+i] = v;
+                // float cellrad = noisedelta * invgrad;
+                // fillRad3D(out, i, j, w, h, k, yh, v, cellrad);
             }
         }
     }
@@ -772,10 +771,9 @@ int mapNether2D(const NetherNoise *nn, int *out, int x, int z, int w, int h)
 
 void setEndSeed(EndNoise *en, uint64_t seed)
 {
-    uint64_t s;
-    setSeed(&s, seed);
-    skipNextN(&s, 17292);
-    perlinInit(en, &s);
+    setSeed(seed);
+    skipNextN(17292);
+    perlinInit(en);
 }
 
 static int getEndBiome(int hx, int hz, const uint16_t *hmap, int hw)
